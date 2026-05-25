@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-coral-primary-bg: #FAF8F5;
+  --color-coral-sidebar-bg: #F2EAE1;
+  --color-coral-card-bg: #FFFFFF;
+  --color-coral-border: #E8E2D9;
+  --color-coral-orange: #C26D3B;
+  --color-coral-red: #A44238;
+  --color-coral-gray: #8B8276;
+  --color-coral-text-primary: #2D2823;
+  --color-coral-text-secondary: #8B8276;
+  --color-coral-sidebar-active: #EADAC9;
+  --color-coral-blue: #4A7C93;
+  --color-coral-gold: #B89B5E;
+  --color-coral-teal: #4B887C;
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --shadow-glow-orange: 0 0 24px rgba(194, 109, 59, 0.15);
+  --shadow-glow-teal: 0 0 24px rgba(75, 136, 124, 0.15);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-coral-primary-bg);
+    color: var(--color-coral-text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom Scrollbar for Monospace outputs */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-coral-border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-coral-gray);
+}
