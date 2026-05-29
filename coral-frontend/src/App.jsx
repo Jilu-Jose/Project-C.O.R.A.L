@@ -38,14 +38,9 @@ function App() {
     // Health polling
     const checkHealth = async () => {
       try {
-        // Fallback for no-backend: if it fails, just show false, but we'll simulate true for UI purposes if needed
-        const res = await request({ method: 'GET', url: '/health' }).catch(() => ({
-          ollama: true, // mock for UI
-          langsmith: true // mock for UI
-        }));
-        dispatch({ type: 'UPDATE_HEALTH', payload: res || { ollama: true, langsmith: true } });
+        const res = await request({ method: 'GET', url: '/health' });
+        dispatch({ type: 'UPDATE_HEALTH', payload: res || { ollama: false, langsmith: false } });
       } catch (e) {
-        // Suppress initial health check errors so UI can render
         dispatch({ type: 'UPDATE_HEALTH', payload: { ollama: false, langsmith: false } });
       }
     };

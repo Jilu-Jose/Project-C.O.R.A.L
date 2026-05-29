@@ -79,6 +79,8 @@ function coralReducer(state, action) {
       };
     case 'SET_SESSION_HISTORY':
       return { ...state, sessionHistory: action.payload };
+    case 'ADD_SESSION':
+      return { ...state, sessionHistory: [action.payload, ...state.sessionHistory] };
     case 'UPDATE_HEALTH':
       return { ...state, healthStatus: action.payload };
     case 'RESET_APP':

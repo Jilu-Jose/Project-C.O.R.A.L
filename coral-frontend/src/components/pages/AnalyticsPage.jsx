@@ -9,38 +9,87 @@ const AnalyticsPage = () => {
   const [animatedConsensus, setAnimatedConsensus] = useState(0);
   const [animatedDensity, setAnimatedDensity] = useState(0);
 
+  const hasDebateData = state.debateState?.converged || state.sessionHistory.length > 0;
+  const elapsedSeconds = state.debateState?.elapsedSeconds || 0;
+  const convergenceThreshold = state.config?.convergence_threshold || 0.80;
+  const roundCount = state.debateState?.round || 0;
+  const maxRounds = state.config?.max_rounds || 3;
+  const totalSessions = state.sessionHistory.length;
+
+  // Compute actual metrics
+  const actualLatency = elapsedSeconds > 0 ? elapsedSeconds : 0;
+  const actualConsensus = state.debateState?.converged ? (convergenceThreshold * 100) : 0;
+  const proposalLength = (state.debateState?.proposals?.[0] || '').length;
+  const critiqueLength = (state.debateState?.critiques?.[0] || '').length;
+  const finalLength = (state.debateState?.final_answer || '').length;
+  const totalTokensEstimate = Math.round((proposalLength + critiqueLength + finalLength) / 4); // rough token estimate
+  const actualDensity = hasDebateData ? Math.min(Math.round((finalLength / Math.max(proposalLength + critiqueLength, 1)) * 100), 100) : 0;
+
   useEffect(() => {
-    const timer1 = setTimeout(() => setAnimatedLatency(0.82), 300);
-    const timer2 = setTimeout(() => setAnimatedConsensus(99.4), 500);
-    const timer3 = setTimeout(() => setAnimatedDensity(73), 700);
+    const timer1 = setTimeout(() => setAnimatedLatency(actualLatency), 300);
+    const timer2 = setTimeout(() => setAnimatedConsensus(actualConsensus), 500);
+    const timer3 = setTimeout(() => setAnimatedDensity(actualDensity), 700);
     return () => { clearTimeout(timer1); clearTimeout(timer2); clearTimeout(timer3); };
-  }, []);
+  }, [actualLatency, actualConsensus, actualDensity]);
 
-  // Mock bar chart data for Reasoning Flow
-  const barData = [
-    { height: 45, label: '' },
-    { height: 55, label: '' },
-    { height: 72, label: '' },
-    { height: 85, label: '84%', isPeak: true },
-    { height: 78, label: '' },
-    { height: 60, label: '' },
-    { height: 40, label: '' },
-  ];
+  // Bar chart from session history — each bar = one past session's round count
+  const barData = (() => {
+    if (state.sessionHistory.length === 0 && roundCount === 0) {
+      return [{ height: 10, label: '', isPeak: false }];
+    }
+    const sessions = [...state.sessionHistory].reverse().slice(-6);
+    // Add current debate if active
+    if (roundCount > 0) {
+      sessions.push({ rounds: roundCount, status: 'CURRENT' });
+    }
+    if (sessions.length === 0) return [{ height: 10, label: '', isPeak: false }];
+    const maxHeight = Math.max(...sessions.map(s => s.rounds || 1));
+    return sessions.map((s, i) => {
+      const rounds = s.rounds || 1;
+      const heightPercent = (rounds / Math.max(maxHeight, 1)) * 100;
+      const isLast = i === sessions.length - 1;
+      return {
+        height: Math.max(heightPercent, 10),
+        label: isLast ? `${rounds}` : '',
+        isPeak: isLast,
+      };
+    });
+  })();
 
-  // Mock trace feed events
-  const traceEvents = [
-    { time: '14:02:11', text: 'Node Alpha-9: Consensus achieved on "Ethical Framework B"', icon: '✓', type: 'success' },
-    { time: '14:01:55', text: 'System: Scaling inference capacity +15% for peak load', icon: '⚡', type: 'warning' },
-    { time: '14:01:22', text: 'Protocol: Role "Auditor" initiated semantic verification', icon: '🔍', type: 'info' },
-    { time: '13:59:15', text: 'Node Beta-2: Synchronized state with primary cluster', icon: '{ }', type: 'info' },
-  ];
+  // Trace events from real state
+  const traceEvents = state.traceEvents.length > 0
+    ? state.traceEvents.slice(-4).reverse().map(t => ({
+        time: new Date(t.id).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        text: `${t.source}: ${t.content}`,
+        icon: t.type === 'SYSTEM' ? '✓' : t.type === 'LLM' ? '⚡' : '🔍',
+        type: t.type === 'SYSTEM' ? 'success' : 'info',
+      }))
+    : [{
+        time: '--:--:--',
+        text: 'No trace events yet. Start a debate to see live traces.',
+        icon: '—',
+        type: 'info',
+      }];
 
-  // Semantic distribution data
-  const semanticData = [
-    { label: 'Reasoning Tokens', value: 42, color: '#C26D3B' },
-    { label: 'Contextual Anchors', value: 28, color: '#8B4513' },
-    { label: 'Metadata Overhead', value: 30, color: '#2C2C2C' },
-  ];
+  // Semantic distribution from actual data
+  const semanticData = (() => {
+    if (!hasDebateData || totalTokensEstimate === 0) {
+      return [
+        { label: 'Proposal Tokens', value: 0, color: '#C26D3B' },
+        { label: 'Critique Tokens', value: 0, color: '#8B4513' },
+        { label: 'Synthesis Tokens', value: 0, color: '#2C2C2C' },
+      ];
+    }
+    const proposalTokens = Math.round(proposalLength / 4);
+    const critiqueTokens = Math.round(critiqueLength / 4);
+    const finalTokens = Math.round(finalLength / 4);
+    const total = proposalTokens + critiqueTokens + finalTokens || 1;
+    return [
+      { label: 'Proposal Tokens', value: Math.round((proposalTokens / total) * 100), color: '#C26D3B' },
+      { label: 'Critique Tokens', value: Math.round((critiqueTokens / total) * 100), color: '#8B4513' },
+      { label: 'Synthesis Tokens', value: Math.round((finalTokens / total) * 100), color: '#2C2C2C' },
+    ];
+  })();
 
   return (
     <div className="flex flex-col h-full overflow-y-auto px-8 py-10 custom-scrollbar">
@@ -53,8 +102,9 @@ const AnalyticsPage = () => {
       >
         <h1 className="font-serif text-5xl text-coral-text-primary mb-3">System Resonance</h1>
         <p className="text-coral-text-secondary text-base max-w-2xl">
-          Real-time operational metrics for the Alpha-9 node. Observing convergence,
-          semantic density, and latent reasoning flows within active debate protocols.
+          {hasDebateData
+            ? `Metrics from ${totalSessions} debate session${totalSessions !== 1 ? 's' : ''}. Observing convergence, semantic density, and reasoning flows.`
+            : 'No debate data available yet. Start a debate to populate analytics.'}
         </p>
       </motion.div>
 
@@ -68,7 +118,9 @@ const AnalyticsPage = () => {
           className="col-span-2 bg-white rounded-2xl p-8 border border-coral-border"
         >
           <h2 className="font-serif text-2xl text-coral-text-primary mb-1">Reasoning Flow</h2>
-          <div className="text-[10px] font-bold text-coral-orange uppercase tracking-[0.15em] mb-8">Active Convergence Rate</div>
+          <div className="text-[10px] font-bold text-coral-orange uppercase tracking-[0.15em] mb-8">
+            {hasDebateData ? 'Rounds Per Session' : 'Awaiting Data'}
+          </div>
           
           {/* Bar Chart */}
           <div className="flex items-end justify-center space-x-4 h-48 mb-6">
@@ -78,7 +130,7 @@ const AnalyticsPage = () => {
                   <div className="text-[10px] font-bold text-coral-orange mb-1">{bar.label}</div>
                 )}
                 {bar.isPeak && (
-                  <div className="text-[9px] font-bold text-coral-orange uppercase tracking-wider mb-1">Peak</div>
+                  <div className="text-[9px] font-bold text-coral-orange uppercase tracking-wider mb-1">Latest</div>
                 )}
                 <motion.div
                   initial={{ height: 0 }}
@@ -108,10 +160,12 @@ const AnalyticsPage = () => {
               </motion.span>
               <div className="text-sm text-coral-text-secondary mt-1">Mean Response Latency</div>
             </div>
-            <div className="flex items-center space-x-2 text-coral-orange text-sm font-medium">
-              <TrendingUp className="w-4 h-4" />
-              <span>12% from baseline</span>
-            </div>
+            {hasDebateData && (
+              <div className="flex items-center space-x-2 text-coral-orange text-sm font-medium">
+                <TrendingUp className="w-4 h-4" />
+                <span>{roundCount} round{roundCount !== 1 ? 's' : ''} completed</span>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -149,8 +203,10 @@ const AnalyticsPage = () => {
             <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-3">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <div className="font-serif text-4xl text-white">4.2M</div>
-            <div className="text-[10px] font-bold text-white/80 uppercase tracking-[0.15em] mt-1">Inference Tokens</div>
+            <div className="font-serif text-4xl text-white">
+              {totalTokensEstimate > 1000 ? `${(totalTokensEstimate / 1000).toFixed(1)}K` : totalTokensEstimate}
+            </div>
+            <div className="text-[10px] font-bold text-white/80 uppercase tracking-[0.15em] mt-1">Inference Tokens (est.)</div>
           </motion.div>
         </div>
       </div>
@@ -167,8 +223,10 @@ const AnalyticsPage = () => {
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-serif text-xl text-coral-text-primary">System Trace Feed</h3>
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-wider">Live Monitor</span>
+              <div className={`w-2 h-2 rounded-full ${state.appState === 'debating' ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
+              <span className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-wider">
+                {state.appState === 'debating' ? 'Live Monitor' : 'Idle'}
+              </span>
             </div>
           </div>
 
@@ -188,10 +246,6 @@ const AnalyticsPage = () => {
               </motion.div>
             ))}
           </div>
-
-          <button className="w-full mt-6 py-3 border border-coral-border rounded-lg text-[10px] font-bold uppercase tracking-[0.15em] text-coral-text-secondary hover:bg-coral-sidebar-bg transition-colors">
-            View Full Logs
-          </button>
         </motion.div>
 
         {/* Semantic Distribution */}
@@ -210,30 +264,32 @@ const AnalyticsPage = () => {
                 {/* Background circle */}
                 <circle cx="100" cy="100" r="70" fill="none" stroke="#F0EBE4" strokeWidth="24" />
                 {/* Segments */}
-                <motion.circle
-                  cx="100" cy="100" r="70" fill="none" stroke="#C26D3B" strokeWidth="24"
-                  strokeDasharray={`${42 * 4.4} ${100 * 4.4}`}
-                  strokeDashoffset="0"
-                  initial={{ strokeDasharray: '0 440' }}
-                  animate={{ strokeDasharray: `${42 * 4.4} ${58 * 4.4}` }}
-                  transition={{ duration: 1, delay: 0.8 }}
-                />
-                <motion.circle
-                  cx="100" cy="100" r="70" fill="none" stroke="#8B4513" strokeWidth="24"
-                  strokeDasharray={`${28 * 4.4} ${72 * 4.4}`}
-                  strokeDashoffset={`${-42 * 4.4}`}
-                  initial={{ strokeDasharray: '0 440' }}
-                  animate={{ strokeDasharray: `${28 * 4.4} ${72 * 4.4}` }}
-                  transition={{ duration: 1, delay: 1 }}
-                />
-                <motion.circle
-                  cx="100" cy="100" r="70" fill="none" stroke="#2C2C2C" strokeWidth="24"
-                  strokeDasharray={`${30 * 4.4} ${70 * 4.4}`}
-                  strokeDashoffset={`${-70 * 4.4}`}
-                  initial={{ strokeDasharray: '0 440' }}
-                  animate={{ strokeDasharray: `${30 * 4.4} ${70 * 4.4}` }}
-                  transition={{ duration: 1, delay: 1.2 }}
-                />
+                {semanticData[0].value > 0 && (
+                  <motion.circle
+                    cx="100" cy="100" r="70" fill="none" stroke="#C26D3B" strokeWidth="24"
+                    initial={{ strokeDasharray: '0 440' }}
+                    animate={{ strokeDasharray: `${semanticData[0].value * 4.4} ${(100 - semanticData[0].value) * 4.4}` }}
+                    transition={{ duration: 1, delay: 0.8 }}
+                  />
+                )}
+                {semanticData[1].value > 0 && (
+                  <motion.circle
+                    cx="100" cy="100" r="70" fill="none" stroke="#8B4513" strokeWidth="24"
+                    strokeDashoffset={`${-semanticData[0].value * 4.4}`}
+                    initial={{ strokeDasharray: '0 440' }}
+                    animate={{ strokeDasharray: `${semanticData[1].value * 4.4} ${(100 - semanticData[1].value) * 4.4}` }}
+                    transition={{ duration: 1, delay: 1 }}
+                  />
+                )}
+                {semanticData[2].value > 0 && (
+                  <motion.circle
+                    cx="100" cy="100" r="70" fill="none" stroke="#2C2C2C" strokeWidth="24"
+                    strokeDashoffset={`${-(semanticData[0].value + semanticData[1].value) * 4.4}`}
+                    initial={{ strokeDasharray: '0 440' }}
+                    animate={{ strokeDasharray: `${semanticData[2].value * 4.4} ${(100 - semanticData[2].value) * 4.4}` }}
+                    transition={{ duration: 1, delay: 1.2 }}
+                  />
+                )}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <motion.span
@@ -272,20 +328,22 @@ const AnalyticsPage = () => {
         className="border-t border-coral-border pt-6 grid grid-cols-4 gap-8"
       >
         <div>
-          <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em] mb-1">Cluster Status</div>
-          <div className="text-sm font-bold text-coral-text-primary">9 Operational Nodes</div>
+          <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em] mb-1">Backend Status</div>
+          <div className="text-sm font-bold text-coral-text-primary">
+            {state.healthStatus?.ollama ? 'Ollama Connected' : 'Ollama Offline'}
+          </div>
         </div>
         <div>
-          <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em] mb-1">Total Compute</div>
-          <div className="text-sm font-bold text-coral-text-primary">4.8 Petaflops (Warm)</div>
+          <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em] mb-1">Total Sessions</div>
+          <div className="text-sm font-bold text-coral-text-primary">{totalSessions}</div>
         </div>
         <div>
-          <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em] mb-1">Regional Hub</div>
-          <div className="text-sm font-bold text-coral-text-primary">Global-East (Alpha)</div>
+          <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em] mb-1">Model</div>
+          <div className="text-sm font-bold text-coral-text-primary">qwen:0.5b (Local)</div>
         </div>
         <div>
-          <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em] mb-1">Last Sync</div>
-          <div className="text-sm font-bold text-coral-text-primary">04s ago</div>
+          <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em] mb-1">Current State</div>
+          <div className="text-sm font-bold text-coral-text-primary capitalize">{state.appState}</div>
         </div>
       </motion.div>
     </div>

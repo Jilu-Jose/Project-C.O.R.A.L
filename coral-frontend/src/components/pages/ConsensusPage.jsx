@@ -8,34 +8,43 @@ const ConsensusPage = () => {
   const { state, dispatch } = useCoral();
   const navigate = useNavigate();
 
-  const finalAnswer = state.debateState.final_answer || 
-    "The Architecture of Autonomous Governance must prioritize semantic interoperability over raw computational throughput.";
+  const finalAnswer = state.debateState.final_answer || "No consensus reached yet.";
   
-  const elaboration = "To ensure long-term stability in decentralized systems, we must recognize that consensus is not merely a mathematical average of inputs, but a narrative synthesis. The primary inhibitor of scalability is not bandwidth, but the contextual degradation of data as it passes between disparate jurisdictional nodes.\n\nOur final determination suggests a tri-layered approach: initial heuristic filtering, followed by an adversarial refinement loop, and finally, a human-centric ethical validation layer. This structure mitigates the risks of catastrophic logic loops while maintaining the speed of automated processing.";
+  const roundCount = state.debateState.round || 0;
+  const convergenceThreshold = state.config?.convergence_threshold || 0.80;
+  const elapsedSeconds = state.debateState.elapsedSeconds || 0;
+  const hasDebateData = !!state.debateState.final_answer;
 
-  const insights = [
-    {
+  // Derive insights from actual debate data
+  const insights = [];
+  if (hasDebateData) {
+    const proposalCount = state.debateState.proposals?.length || 0;
+    const critiqueCount = state.debateState.critiques?.length || 0;
+
+    insights.push({
       icon: <Globe className="w-5 h-5" />,
       iconColor: 'text-coral-orange',
       iconBg: 'bg-orange-50',
-      title: 'Cognitive Variance',
-      description: 'Low variance detected between nodes Alpha and Gamma, suggesting high conceptual stability.',
-    },
-    {
+      title: 'Debate Depth',
+      description: `${roundCount} round${roundCount !== 1 ? 's' : ''} of adversarial reasoning with ${proposalCount} proposal${proposalCount !== 1 ? 's' : ''} and ${critiqueCount} critique${critiqueCount !== 1 ? 's' : ''}.`,
+    });
+
+    insights.push({
       icon: <Search className="w-5 h-5" />,
       iconColor: 'text-red-500',
       iconBg: 'bg-red-50',
-      title: 'Precedent Link',
-      description: 'Findings align with 2026 Whitepaper on Narrative Synthesis and Distributed Trust.',
-    },
-    {
+      title: 'Convergence',
+      description: `Target threshold of ${(convergenceThreshold * 100).toFixed(0)}% was applied across all active agents.`,
+    });
+
+    insights.push({
       icon: <AlertTriangle className="w-5 h-5" />,
       iconColor: 'text-coral-orange',
       iconBg: 'bg-orange-50',
-      title: 'Network Impact',
-      description: 'Consensus propagation will trigger an automated update across 490 global nodes.',
-    },
-  ];
+      title: 'Compute Time',
+      description: `Total inference completed in ${elapsedSeconds}s across the full debate loop.`,
+    });
+  }
 
   const handleExport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.debateState, null, 2));
@@ -72,10 +81,13 @@ const ConsensusPage = () => {
           </motion.div>
         </div>
         <div className="text-[10px] font-bold text-coral-orange uppercase tracking-[0.2em] mb-2">Protocol Complete</div>
-        <h1 className="font-serif text-5xl text-coral-text-primary mb-4">Consensus Reached</h1>
+        <h1 className="font-serif text-5xl text-coral-text-primary mb-4">
+          {hasDebateData ? 'Consensus Reached' : 'No Debate Data'}
+        </h1>
         <p className="text-coral-text-secondary text-sm max-w-lg mx-auto">
-          The synthesis engine has reconciled conflicting perspectives across {state.debateState.round || 14} high-density logic loops. 
-          The final verdict represents a 98.4% alignment across all active nodes.
+          {hasDebateData
+            ? `The synthesis engine has reconciled conflicting perspectives across ${roundCount} logic loop${roundCount !== 1 ? 's' : ''}. The final verdict represents a ${(convergenceThreshold * 100).toFixed(1)}% alignment across all active nodes.`
+            : 'Start a new debate to see consensus results here.'}
         </p>
       </motion.div>
 
@@ -89,13 +101,13 @@ const ConsensusPage = () => {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-coral-orange to-transparent opacity-20" />
         
         <h2 className="font-serif text-3xl text-coral-text-primary leading-tight mb-8">
-          {finalAnswer}
+          {state.task || 'Untitled Debate'}
         </h2>
         
         <div className="w-16 h-px bg-coral-border mb-8" />
         
         <div className="font-sans text-coral-text-primary leading-relaxed text-justify">
-          {elaboration.split('\n').map((paragraph, idx) => (
+          {finalAnswer.split('\n').map((paragraph, idx) => (
             <p key={idx} className="mb-4">{paragraph}</p>
           ))}
         </div>
@@ -106,91 +118,53 @@ const ConsensusPage = () => {
             <span className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-widest mb-1">Rounds</span>
             <div className="flex items-center space-x-2 text-coral-text-primary font-serif text-xl">
               <span className="text-coral-orange">⟳</span>
-              <span>{state.debateState.round || 14}</span>
+              <span>{roundCount}</span>
             </div>
           </div>
           <div className="flex flex-col items-center">
             <span className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-widest mb-1">Convergence</span>
             <div className="flex items-center space-x-2 text-coral-text-primary font-serif text-xl">
               <span className="text-coral-orange">↗</span>
-              <span>98.4%</span>
+              <span>{(convergenceThreshold * 100).toFixed(1)}%</span>
             </div>
           </div>
           <div className="flex flex-col items-center">
             <span className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-widest mb-1">Compute Time</span>
             <div className="flex items-center space-x-2 text-coral-text-primary font-serif text-xl">
               <span className="text-coral-orange">⏱</span>
-              <span>{state.debateState.elapsedSeconds || 1.2}s</span>
+              <span>{elapsedSeconds}s</span>
             </div>
           </div>
           <div className="flex flex-col items-center">
             <span className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-widest mb-1">Confidence</span>
             <div className="flex items-center space-x-2 text-coral-text-primary font-serif text-xl">
               <span className="text-coral-orange">◇</span>
-              <span>High</span>
+              <span>{hasDebateData ? 'High' : '—'}</span>
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Insight Cards */}
-      <div className="w-full max-w-3xl grid grid-cols-3 gap-6 mb-10">
-        {insights.map((insight, i) => (
-          <motion.div
-            key={insight.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 + i * 0.1 }}
-            className="bg-white rounded-2xl p-6 border border-coral-border"
-          >
-            <div className={`w-10 h-10 rounded-xl ${insight.iconBg} ${insight.iconColor} flex items-center justify-center mb-4`}>
-              {insight.icon}
-            </div>
-            <h3 className="font-serif text-lg text-coral-text-primary mb-2">{insight.title}</h3>
-            <p className="text-sm text-coral-text-secondary leading-relaxed">{insight.description}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Verification Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.7 }}
-        className="w-full max-w-3xl rounded-2xl overflow-hidden mb-10 relative h-48"
-        style={{
-          background: 'linear-gradient(135deg, #2C2C2C 0%, #4A3728 50%, #C26D3B 100%)',
-        }}
-      >
-        <div className="absolute inset-0 flex items-end p-6">
-          <div>
-            <div className="text-[10px] font-bold text-white/60 uppercase tracking-[0.15em] mb-1">Verified By</div>
-            <div className="text-white font-serif text-lg">Director Julian Vane</div>
-          </div>
-        </div>
-        {/* Decorative dots/nodes */}
-        <div className="absolute inset-0 opacity-20">
-          {Array.from({ length: 20 }).map((_, i) => (
+      {/* Insight Cards — only shown when real data exists */}
+      {insights.length > 0 && (
+        <div className="w-full max-w-3xl grid grid-cols-3 gap-6 mb-10">
+          {insights.map((insight, i) => (
             <motion.div
-              key={i}
-              className="absolute w-1.5 h-1.5 rounded-full bg-coral-orange"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-              animate={{
-                opacity: [0.3, 1, 0.3],
-                scale: [0.8, 1.2, 0.8],
-              }}
-              transition={{
-                duration: 2 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
+              key={insight.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 + i * 0.1 }}
+              className="bg-white rounded-2xl p-6 border border-coral-border"
+            >
+              <div className={`w-10 h-10 rounded-xl ${insight.iconBg} ${insight.iconColor} flex items-center justify-center mb-4`}>
+                {insight.icon}
+              </div>
+              <h3 className="font-serif text-lg text-coral-text-primary mb-2">{insight.title}</h3>
+              <p className="text-sm text-coral-text-secondary leading-relaxed">{insight.description}</p>
+            </motion.div>
           ))}
         </div>
-      </motion.div>
+      )}
 
       {/* Action Buttons */}
       <motion.div
@@ -201,7 +175,8 @@ const ConsensusPage = () => {
       >
         <button
           onClick={handleExport}
-          className="flex items-center space-x-2 border-2 border-coral-orange text-coral-orange px-8 py-3 rounded-full font-bold text-sm hover:bg-orange-50 transition-colors"
+          disabled={!hasDebateData}
+          className="flex items-center space-x-2 border-2 border-coral-orange text-coral-orange px-8 py-3 rounded-full font-bold text-sm hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download className="w-4 h-4" />
           <span>Export Consensus</span>

@@ -6,55 +6,105 @@ import { useCoral } from '../../context/CoralContext';
 const RolesPage = () => {
   const { state, dispatch } = useCoral();
 
+  const roundCount = state.debateState?.round || 0;
+  const hasDebate = state.appState !== 'idle';
+  const proposalText = state.debateState?.proposals?.[0] || '';
+  const critiqueText = state.debateState?.critiques?.[0] || '';
+  const finalText = state.debateState?.final_answer || '';
+
+  // Compute simple "scores" from output lengths relative to each other
+  const proposalLen = proposalText.length;
+  const critiqueLen = critiqueText.length;
+  const finalLen = finalText.length;
+  const maxLen = Math.max(proposalLen, critiqueLen, finalLen, 1);
+
   const agents = [
     {
-      name: 'Agent Zephyr-4',
-      role: 'Strategist',
-      title: 'The Arbiter',
-      badge: 'NEW ASSIGNMENT',
-      badgeColor: 'bg-coral-orange/10 text-coral-orange',
+      name: 'Proposer Agent',
+      role: state.agentStatuses?.proposer || 'WAITING',
+      title: 'The Initiator',
+      badge: state.agentStatuses?.proposer === 'IDLE' ? 'COMPLETED' : state.agentStatuses?.proposer || 'WAITING',
+      badgeColor: state.agentStatuses?.proposer === 'IDLE' 
+        ? 'bg-green-50 text-green-600' 
+        : state.agentStatuses?.proposer === 'THINKING' 
+          ? 'bg-coral-orange/10 text-coral-orange'
+          : 'bg-gray-100 text-gray-600',
       icon: <Flame className="w-5 h-5" />,
-      iconBg: 'bg-red-50 text-red-500',
-      description: 'Elevated for high neutrality scores and effective synthesis of conflicting data points during the stabilization phase.',
-      metricLabel: 'NEUTRALITY SCORE',
-      metricValue: 88,
+      iconBg: 'bg-orange-50 text-coral-orange',
+      description: proposalText 
+        ? `Output: "${proposalText.slice(0, 120)}${proposalText.length > 120 ? '...' : ''}"` 
+        : 'No proposal generated yet. Start a debate to see agent output.',
+      metricLabel: 'OUTPUT DEPTH',
+      metricValue: hasDebate && proposalLen > 0 ? Math.round((proposalLen / maxLen) * 100) : 0,
       metricColor: '#C26D3B',
     },
     {
-      name: 'Agent Mira-12',
-      role: 'Observer',
-      title: 'The Catalyst',
-      badge: 'PROMOTED',
-      badgeColor: 'bg-green-50 text-green-600',
+      name: 'Critic Agent',
+      role: state.agentStatuses?.critic || 'WAITING',
+      title: 'The Challenger',
+      badge: state.agentStatuses?.critic === 'IDLE'
+        ? 'COMPLETED'
+        : state.agentStatuses?.critic || 'WAITING',
+      badgeColor: state.agentStatuses?.critic === 'IDLE'
+        ? 'bg-green-50 text-green-600'
+        : state.agentStatuses?.critic === 'THINKING'
+          ? 'bg-coral-orange/10 text-coral-orange'
+          : 'bg-gray-100 text-gray-600',
       icon: <Zap className="w-5 h-5" />,
-      iconBg: 'bg-orange-50 text-coral-orange',
-      description: 'Recognized for introducing volatile variables that successfully challenged stagnant consensus loops in Round 2.',
-      metricLabel: 'VARIANCE IMPACT',
-      metricValue: 74,
+      iconBg: 'bg-red-50 text-red-500',
+      description: critiqueText
+        ? `Output: "${critiqueText.slice(0, 120)}${critiqueText.length > 120 ? '...' : ''}"`
+        : 'No critique generated yet. The Critic analyzes the Proposer\'s response.',
+      metricLabel: 'CRITIQUE DEPTH',
+      metricValue: hasDebate && critiqueLen > 0 ? Math.round((critiqueLen / maxLen) * 100) : 0,
       metricColor: '#8B4513',
     },
     {
-      name: 'Agent Titan-9',
-      role: 'Aggressor',
-      title: 'The Anchor',
-      badge: 'STABILIZED',
-      badgeColor: 'bg-gray-100 text-gray-600',
+      name: 'Arbitrator Agent',
+      role: state.agentStatuses?.arbitrator || 'WAITING',
+      title: 'The Synthesizer',
+      badge: state.agentStatuses?.arbitrator === 'IDLE'
+        ? 'COMPLETED'
+        : state.agentStatuses?.arbitrator || 'WAITING',
+      badgeColor: state.agentStatuses?.arbitrator === 'IDLE'
+        ? 'bg-green-50 text-green-600'
+        : state.agentStatuses?.arbitrator === 'THINKING'
+          ? 'bg-coral-orange/10 text-coral-orange'
+          : 'bg-gray-100 text-gray-600',
       icon: <Shield className="w-5 h-5" />,
       iconBg: 'bg-gray-50 text-gray-500',
-      description: 'Shifted to a defensive posture to preserve established logical frameworks against excessive speculative drift.',
-      metricLabel: 'LOGIC FIDELITY',
-      metricValue: 92,
+      description: finalText
+        ? `Output: "${finalText.slice(0, 120)}${finalText.length > 120 ? '...' : ''}"`
+        : 'No synthesis generated yet. The Arbitrator reconciles Proposer and Critic outputs.',
+      metricLabel: 'SYNTHESIS DEPTH',
+      metricValue: hasDebate && finalLen > 0 ? Math.round((finalLen / maxLen) * 100) : 0,
       metricColor: '#2C2C2C',
     },
   ];
 
-  const leaderboard = [
-    { rank: '01', name: 'Agent Zephyr-4', score: 982, color: '#C26D3B', width: '100%' },
-    { rank: '02', name: 'Agent Titan-9', score: 914, color: '#8B4513', width: '93%' },
-    { rank: '03', name: 'Agent Mira-12', score: 876, color: '#2C2C2C', width: '89%' },
-    { rank: '04', name: 'Agent Krios-X', score: 790, color: '#A0A0A0', width: '80%' },
-    { rank: '05', name: 'Agent Echo-5', score: 645, color: '#C0C0C0', width: '65%' },
-  ];
+  // Build leaderboard from session history
+  const leaderboard = (() => {
+    if (state.sessionHistory.length === 0 && !hasDebate) {
+      return [
+        { rank: '01', name: 'No sessions yet', score: 0, color: '#C0C0C0', width: '0%' },
+      ];
+    }
+    // Show recent sessions as leaderboard entries
+    const entries = state.sessionHistory.slice(0, 5).map((session, i) => ({
+      rank: String(i + 1).padStart(2, '0'),
+      name: session.task?.slice(0, 40) || 'Untitled',
+      score: session.rounds || 1,
+      color: i === 0 ? '#C26D3B' : i === 1 ? '#8B4513' : '#2C2C2C',
+      width: `${Math.max(20, Math.round(((session.rounds || 1) / (state.config?.max_rounds || 3)) * 100))}%`,
+    }));
+    return entries.length > 0 ? entries : [{ rank: '01', name: 'No sessions yet', score: 0, color: '#C0C0C0', width: '0%' }];
+  })();
+
+  const avgScore = (() => {
+    if (state.sessionHistory.length === 0) return 0;
+    const total = state.sessionHistory.reduce((sum, s) => sum + (s.rounds || 1), 0);
+    return (total / state.sessionHistory.length).toFixed(1);
+  })();
 
   return (
     <div className="flex flex-col h-full overflow-y-auto px-8 py-10 custom-scrollbar">
@@ -65,10 +115,18 @@ const RolesPage = () => {
         transition={{ duration: 0.5 }}
         className="bg-white rounded-2xl p-10 border border-coral-border text-center mb-10"
       >
-        <div className="text-[10px] font-bold text-coral-orange uppercase tracking-[0.2em] mb-3">Process Sync Success</div>
-        <h1 className="font-serif text-5xl text-coral-text-primary mb-4">Round 2 Complete</h1>
+        <div className="text-[10px] font-bold text-coral-orange uppercase tracking-[0.2em] mb-3">
+          {hasDebate ? 'Process Sync' : 'Awaiting Debate'}
+        </div>
+        <h1 className="font-serif text-5xl text-coral-text-primary mb-4">
+          {hasDebate 
+            ? `Round ${roundCount} ${state.debateState?.converged ? 'Complete' : 'In Progress'}`
+            : 'No Active Debate'}
+        </h1>
         <p className="text-coral-text-secondary text-base max-w-xl mx-auto">
-          The neural weight distribution has finalized. Adaptive roles have been reassigned based on semantic performance and consensus influence.
+          {hasDebate
+            ? 'Adaptive roles are assigned based on the debate flow. Each agent contributes its perspective to reach consensus.'
+            : 'Start a new debate to see how agents are assigned and perform across rounds.'}
         </p>
       </motion.div>
 
@@ -96,7 +154,7 @@ const RolesPage = () => {
             <div className="text-sm text-coral-text-secondary mb-1">
               {agent.role} → <span className="text-coral-orange font-medium">{agent.title}</span>
             </div>
-            <p className="text-sm text-coral-text-secondary mt-4 mb-6 leading-relaxed">
+            <p className="text-sm text-coral-text-secondary mt-4 mb-6 leading-relaxed line-clamp-3">
               {agent.description}
             </p>
 
@@ -120,26 +178,28 @@ const RolesPage = () => {
         ))}
       </div>
 
-      {/* Agent Score Leaderboard */}
+      {/* Session History Leaderboard */}
       <div className="grid grid-cols-2 gap-8 mb-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <h2 className="font-serif text-3xl text-coral-text-primary mb-2">Agent Score<br/>Leaderboard</h2>
+          <h2 className="font-serif text-3xl text-coral-text-primary mb-2">Session<br/>Leaderboard</h2>
           <p className="text-sm text-coral-text-secondary mb-8">
-            Aggregate performance scores across semantic depth, response latency, and consensus-driving capability.
+            Recent debate sessions ranked by round depth and convergence results.
           </p>
 
           {/* Score pill */}
           <div className="bg-coral-sidebar-bg rounded-xl p-6 border border-coral-border flex items-center space-x-6">
             <div>
-              <div className="font-serif text-4xl text-coral-orange">89.4</div>
-              <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em]">Avg. Node Score</div>
+              <div className="font-serif text-4xl text-coral-orange">{avgScore}</div>
+              <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em]">Avg. Rounds</div>
             </div>
             <div className="text-sm text-coral-text-secondary italic">
-              "Performance increased by 12% compared to Round 1 stabilization."
+              {state.sessionHistory.length > 0
+                ? `"${state.sessionHistory.length} session${state.sessionHistory.length !== 1 ? 's' : ''} completed."`
+                : '"No sessions completed yet."'}
             </div>
           </div>
         </motion.div>
@@ -153,7 +213,7 @@ const RolesPage = () => {
         >
           {leaderboard.map((entry, i) => (
             <motion.div
-              key={entry.name}
+              key={entry.rank + entry.name}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6 + i * 0.1 }}
@@ -161,9 +221,9 @@ const RolesPage = () => {
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center space-x-3">
                   <span className="text-sm font-bold text-coral-text-secondary">{entry.rank}</span>
-                  <span className="text-sm font-bold text-coral-text-primary">{entry.name}</span>
+                  <span className="text-sm font-bold text-coral-text-primary truncate max-w-[200px]">{entry.name}</span>
                 </div>
-                <span className="text-sm font-bold" style={{ color: entry.color }}>{entry.score} pts</span>
+                <span className="text-sm font-bold" style={{ color: entry.color }}>{entry.score} rnd{entry.score !== 1 ? 's' : ''}</span>
               </div>
               <div className="h-2 bg-coral-border rounded-full overflow-hidden">
                 <motion.div
@@ -179,19 +239,6 @@ const RolesPage = () => {
         </motion.div>
       </div>
 
-      {/* View Full System Metrics link */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1 }}
-        className="mb-12"
-      >
-        <button className="text-coral-orange text-sm font-bold flex items-center space-x-2 border-b border-coral-orange pb-0.5 hover:opacity-80 transition-opacity">
-          <span>View Full System Metrics</span>
-          <TrendingUp className="w-4 h-4" />
-        </button>
-      </motion.div>
-
       {/* Footer Status */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -201,25 +248,26 @@ const RolesPage = () => {
       >
         <div className="flex items-center space-x-4">
           <div className="w-10 h-10 rounded-full bg-coral-sidebar-bg flex items-center justify-center">
-            <div className="w-5 h-5 rounded-full border-2 border-coral-text-secondary" />
+            <div className={`w-5 h-5 rounded-full border-2 ${hasDebate ? 'border-coral-orange' : 'border-coral-text-secondary'}`} />
           </div>
           <div>
             <div className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-[0.15em]">System Status</div>
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-coral-orange animate-pulse" />
-              <span className="text-sm text-coral-text-primary">Re-synchronization in progress...</span>
+              <div className={`w-2 h-2 rounded-full ${hasDebate ? 'bg-coral-orange animate-pulse' : 'bg-gray-400'}`} />
+              <span className="text-sm text-coral-text-primary">
+                {state.appState === 'debating' ? 'Debate in progress...' 
+                  : state.appState === 'converged' ? 'Consensus reached' 
+                  : 'System idle'}
+              </span>
             </div>
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <button className="px-6 py-2.5 border border-coral-border rounded-lg text-sm font-bold text-coral-text-primary hover:bg-coral-sidebar-bg transition-colors">
-            Download Log
-          </button>
           <button 
-            onClick={() => dispatch({ type: 'RESET_APP' })}
+            onClick={() => { dispatch({ type: 'RESET_APP' }); }}
             className="px-6 py-2.5 bg-coral-orange text-white rounded-lg text-sm font-bold hover:opacity-90 transition-opacity"
           >
-            Begin Round 3
+            New Debate
           </button>
         </div>
       </motion.div>

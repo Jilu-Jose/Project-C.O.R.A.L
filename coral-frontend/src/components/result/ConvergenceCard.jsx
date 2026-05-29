@@ -41,7 +41,7 @@ const ConvergenceCard = () => {
     dispatch({ type: 'RESET_APP' });
   };
 
-  const finalAnswer = state.debateState.final_answer || "To ensure long-term stability in decentralized systems, we must recognize that consensus is not merely a mathematical average of inputs, but a narrative synthesis. The primary inhibitor of scalability is not bandwidth, but the contextual degradation of data...";
+  const finalAnswer = state.debateState.final_answer || "No consensus reached.";
 
   return (
     <div className="flex flex-col h-full overflow-y-auto px-8 py-10 custom-scrollbar items-center">

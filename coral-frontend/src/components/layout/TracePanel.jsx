@@ -5,12 +5,23 @@ import ArcGauge from '../shared/ArcGauge';
 const TracePanel = () => {
   const { state } = useCoral();
 
-  // Mocking metrics if they don't exist yet to match the image
-  const metrics = state.debateState?.metrics || {
-    coherence: 0.85,
-    convergenceEfficiency: 0.62,
-    hallucinationRisk: 0.12,
-    roleStability: 0.94
+  // Derive metrics from actual debate state
+  const hasDebate = state.appState !== 'idle';
+  const roundsUsed = state.debateState?.round || 0;
+  const maxRounds = state.config?.max_rounds || 3;
+  const hasConverged = state.debateState?.converged || false;
+  const proposalCount = state.debateState?.proposals?.length || 0;
+  const critiqueCount = state.debateState?.critiques?.length || 0;
+
+  const metrics = {
+    // Coherence: 1.0 if converged, otherwise proportional to rounds completed
+    coherence: hasDebate ? (hasConverged ? 0.95 : Math.min(roundsUsed / maxRounds, 0.7)) : 0,
+    // Convergence efficiency: higher if converged in fewer rounds
+    convergenceEfficiency: hasDebate ? (hasConverged ? Math.max(0.5, 1 - (roundsUsed / maxRounds) * 0.5) : roundsUsed / maxRounds * 0.4) : 0,
+    // Variance: based on how many critique rounds occurred
+    hallucinationRisk: hasDebate ? Math.min(critiqueCount * 0.15, 0.6) : 0,
+    // Stability: high if both proposals and critiques exist
+    roleStability: hasDebate ? (proposalCount > 0 && critiqueCount > 0 ? 0.9 : proposalCount > 0 ? 0.5 : 0) : 0,
   };
 
   const getTagStyle = (type) => {
@@ -27,7 +38,7 @@ const TracePanel = () => {
     <div className="h-full flex flex-col pt-6 pb-6 px-4">
       <div className="flex items-center space-x-2 mb-6 px-2">
         <h2 className="text-sm font-bold text-coral-text-primary tracking-wide">SYSTEM TRACE FEED</h2>
-        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        <div className={`w-2 h-2 rounded-full ${state.appState === 'debating' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
       </div>
 
       {/* Trace Feed List */}
@@ -42,11 +53,11 @@ const TracePanel = () => {
                   {trace.type}
                 </span>
                 <span className="text-[10px] bg-coral-sidebar-bg text-coral-text-secondary px-1.5 py-0.5 rounded-full font-mono">
-                  {trace.latency}s
+                  {trace.latency}
                 </span>
               </div>
               <div className="font-mono text-xs text-coral-text-secondary leading-relaxed">
-                {trace.description}
+                {trace.content || trace.description}
               </div>
             </div>
           ))

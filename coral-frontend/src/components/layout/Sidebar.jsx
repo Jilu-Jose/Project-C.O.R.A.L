@@ -29,14 +29,8 @@ const Sidebar = () => {
         const data = await request({ method: 'GET', url: '/history?limit=20' });
         dispatch({ type: 'SET_SESSION_HISTORY', payload: data });
       } catch (err) {
-        // mock data
-        dispatch({
-          type: 'SET_SESSION_HISTORY',
-          payload: [
-            { trace_id: '1', task: 'The Ethics of Decentralized Jurisprudence', status: 'CONVERGED', rounds: 3, elapsedSeconds: 12, timestamp: new Date(Date.now() - 7200000).toISOString(), final_answer: "To ensure long-term stability in decentralized systems, we must recognize that consensus is not merely a mathematical average of inputs..." },
-            { trace_id: '2', task: 'Socio-economic impacts of orbital manufacturing', status: 'PARTIAL', rounds: 2, elapsedSeconds: 8, timestamp: new Date(Date.now() - 86400000).toISOString(), final_answer: "Partial consensus achieved." }
-          ]
-        });
+        // No mock data — start with empty history
+        console.warn('Could not fetch history:', err.message);
       }
     };
     fetchHistory();
