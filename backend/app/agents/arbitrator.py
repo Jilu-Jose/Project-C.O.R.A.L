@@ -1,18 +1,15 @@
-from app.models.ollama_client import get_llm
+from app.models.llm_factory import get_llm
 
 class ArbitratorAgent:
-
-
-    def __init__(self):
-        self.llm = get_llm()
-
     async def finalize(
             self,
             query: str,
             proposer_answer: str,
-            critic_feedback: str
+            critic_feedback: str,
+            model_provider: str = "ollama",
+            model_name: str = "qwen:0.5b"
     ):
-        
+        llm = get_llm(provider=model_provider, model_name=model_name)
         prompt = f""" 
         You are an arbitrator agent.
 
@@ -31,7 +28,5 @@ class ArbitratorAgent:
         {critic_feedback}
         """
 
-        response = self.llm.invoke(prompt)
-        return response
-
-
+        response = llm.invoke(prompt)
+        return response.content if hasattr(response, 'content') else response

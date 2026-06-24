@@ -12,7 +12,11 @@ role_manager = RoleManager()
 
 async def proposer_node(state: AgentState):
 
-    response = await proposer.generate(state["query"])
+    response = await proposer.generate(
+        state["query"],
+        model_provider=state.get("model_provider", "ollama"),
+        model_name=state.get("model_name", "qwen:0.5b")
+    )
 
     state["proposer_response"] = response
     state["debate_history"].append({
@@ -25,7 +29,9 @@ async def proposer_node(state: AgentState):
 async def critic_node(state: AgentState):
     feedback = await critic.critique(
         state["query"],
-        state["proposer_response"]
+        state["proposer_response"],
+        model_provider=state.get("model_provider", "ollama"),
+        model_name=state.get("model_name", "qwen:0.5b")
     )
 
     state["critic_response"] = feedback
@@ -39,7 +45,9 @@ async def arbitrator_node(state: AgentState):
     final_answer = await arbitrator.finalize(
         state["query"],
         state["proposer_response"],
-        state["critic_response"]
+        state["critic_response"],
+        model_provider=state.get("model_provider", "ollama"),
+        model_name=state.get("model_name", "qwen:0.5b")
     )
 
     state["final_response"] = final_answer

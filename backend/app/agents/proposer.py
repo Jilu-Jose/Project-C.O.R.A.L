@@ -1,12 +1,8 @@
-from app.models.ollama_client import get_llm
+from app.models.llm_factory import get_llm
 
 class ProposerAgent:
-
-    def __init__(self):
-        self.llm = get_llm()
-
-    async def generate(self, query: str):
-
+    async def generate(self, query: str, model_provider: str = "ollama", model_name: str = "qwen:0.5b"):
+        llm = get_llm(provider=model_provider, model_name=model_name)
         prompt = f""" 
 
         You are a highly intelligent proposer agent.
@@ -17,6 +13,6 @@ class ProposerAgent:
         {query}
         """
 
-        response = self.llm.invoke(prompt)
-
-        return response
+        response = llm.invoke(prompt)
+        # If Bedrock, response might be AIMessage, otherwise string
+        return response.content if hasattr(response, 'content') else response

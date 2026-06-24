@@ -1,12 +1,8 @@
-from app.models.ollama_client import get_llm
+from app.models.llm_factory import get_llm
 
 class ResolverAgent:
-
-    def __init__(self):
-        self.llm = get_llm()
-
-    async def resolver(self, query:str, resolver_selection:str):
-
+    async def resolver(self, query:str, resolver_selection:str, model_provider: str = "ollama", model_name: str = "qwen:0.5b"):
+        llm = get_llm(provider=model_provider, model_name=model_name)
         prompt = f""" 
         You are a conflict resolver agent,
         Analyse the response from other agents and 
@@ -17,5 +13,5 @@ class ResolverAgent:
         Output: {resolver_selection}
         """
 
-        response = self.llm.invoke(prompt)
-        return response
+        response = llm.invoke(prompt)
+        return response.content if hasattr(response, 'content') else response

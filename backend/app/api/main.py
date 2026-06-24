@@ -29,6 +29,8 @@ class QueryRequest(BaseModel):
     query: str
     max_rounds: Optional[int] = 3
     convergence_threshold: Optional[float] = 0.80
+    model_provider: Optional[str] = "ollama"
+    model_name: Optional[str] = "qwen:0.5b"
 
 
 
@@ -51,7 +53,9 @@ async def debate(data: QueryRequest):
         "critic_response": "",
         "final_response": "",
         "debate_history": [],
-        "round_count": 0
+        "round_count": 0,
+        "model_provider": data.model_provider,
+        "model_name": data.model_name
     }
 
     try:
@@ -103,3 +107,5 @@ async def health():
         "ollama": True,
         "langsmith": False
     }
+
+

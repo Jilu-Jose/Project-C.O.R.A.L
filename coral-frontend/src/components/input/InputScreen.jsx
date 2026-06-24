@@ -3,7 +3,7 @@ import { useCoral } from '../../context/CoralContext';
 import { useApi } from '../../hooks/useApi';
 import ConfigCard from './ConfigCard';
 import DebateButton from './DebateButton';
-import { Zap } from 'lucide-react';
+import { Zap, Server, Key } from 'lucide-react';
 
 const InputScreen = () => {
   const { state, dispatch } = useCoral();
@@ -87,6 +87,66 @@ const InputScreen = () => {
           description={`Augment with Alpha-8 logs`}
           onChange={(val) => dispatch({ type: 'UPDATE_CONFIG', payload: { memory_injection: val } })}
         />
+      </div>
+
+      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div className="bg-coral-sidebar-bg rounded-2xl p-6 flex flex-col justify-between shadow-sm border border-coral-border/50">
+          <div className="flex justify-between items-start mb-6">
+            <Server className="w-5 h-5 text-coral-orange" />
+            <span className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-widest">PROVIDER</span>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-coral-text-primary mb-3">Compute Engine</h3>
+            <div className="mt-1">
+              <p className="text-xs text-coral-text-secondary mb-6 leading-relaxed">Toggle between local inference or cloud-based Bedrock models.</p>
+              <div className="flex items-center justify-between">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${state.config.model_provider === 'bedrock' ? 'text-coral-orange' : 'text-coral-text-secondary'}`}>
+                  {state.config.model_provider === 'bedrock' ? 'AMAZON BEDROCK' : 'LOCAL OLLAMA'}
+                </span>
+                <button 
+                  onClick={() => {
+                    const newProvider = state.config.model_provider === 'ollama' ? 'bedrock' : 'ollama';
+                    const newModel = newProvider === 'bedrock' ? 'anthropic.claude-3-haiku-20240307-v1:0' : 'qwen:0.5b';
+                    dispatch({ type: 'UPDATE_CONFIG', payload: { model_provider: newProvider, model_name: newModel } });
+                  }}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${state.config.model_provider === 'bedrock' ? 'bg-[#E5D5C5]' : 'bg-coral-border'} focus:outline-none`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-coral-orange absolute top-0.5 transition-transform ${state.config.model_provider === 'bedrock' ? 'translate-x-5' : 'translate-x-1'}`}></div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-coral-sidebar-bg rounded-2xl p-6 flex flex-col justify-between shadow-sm border border-coral-border/50">
+          <div className="flex justify-between items-start mb-6">
+            <Key className="w-5 h-5 text-coral-orange" />
+            <span className="text-[10px] font-bold text-coral-text-secondary uppercase tracking-widest">MODEL ID</span>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-coral-text-primary mb-3">Model Selection</h3>
+            {state.config.model_provider === 'bedrock' ? (
+              <select
+                value={state.config.model_name}
+                onChange={(e) => dispatch({ type: 'UPDATE_CONFIG', payload: { model_name: e.target.value } })}
+                className="w-full bg-white border border-coral-border text-coral-text-primary text-sm rounded-lg focus:ring-coral-orange focus:border-coral-orange block p-2.5 outline-none"
+              >
+                <option value="anthropic.claude-3-haiku-20240307-v1:0">Claude 3 Haiku</option>
+                <option value="anthropic.claude-3-sonnet-20240229-v1:0">Claude 3 Sonnet</option>
+                <option value="anthropic.claude-3-opus-20240229-v1:0">Claude 3 Opus</option>
+                <option value="anthropic.claude-3-5-sonnet-20240620-v1:0">Claude 3.5 Sonnet</option>
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={state.config.model_name}
+                onChange={(e) => dispatch({ type: 'UPDATE_CONFIG', payload: { model_name: e.target.value } })}
+                className="w-full bg-white border border-coral-border text-coral-text-primary text-sm rounded-lg focus:ring-coral-orange focus:border-coral-orange block p-2.5 outline-none"
+                placeholder="e.g. qwen:0.5b"
+              />
+            )}
+          </div>
+        </div>
       </div>
       
       {/* Bottom Status Pill */}

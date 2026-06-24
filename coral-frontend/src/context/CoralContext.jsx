@@ -9,6 +9,8 @@ const initialState = {
     max_rounds: 3,
     convergence_threshold: 0.80,
     memory_injection: true,
+    model_provider: 'ollama',
+    model_name: 'qwen:0.5b',
   },
   debateState: {
     round: 1,

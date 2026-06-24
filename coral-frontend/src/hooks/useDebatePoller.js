@@ -35,7 +35,9 @@ export const useDebatePoller = (traceId, onUpdate, isActive, taskText, config) =
           const payload = {
             query: taskText,
             max_rounds: config?.max_rounds || 3,
-            convergence_threshold: config?.convergence_threshold || 0.8
+            convergence_threshold: config?.convergence_threshold || 0.8,
+            model_provider: config?.model_provider || 'ollama',
+            model_name: config?.model_name || 'qwen:0.5b'
           };
           const response = await request({ method: 'POST', url: '/debate', data: payload });
           if (abortRef.current) return;

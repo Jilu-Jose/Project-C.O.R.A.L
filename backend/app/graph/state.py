@@ -7,5 +7,5 @@ class AgentState(TypedDict):
     final_response: str
     debate_history: List[dict]
     round_count: int
-
-    
+    model_provider: str
+    model_name: str
