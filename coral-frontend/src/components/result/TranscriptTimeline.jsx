@@ -12,8 +12,8 @@ const TranscriptTimeline = ({ debateState }) => {
       rounds.push({ role: 'CRITIC', name: 'Elena Vance', color: 'bg-coral-red/10 text-coral-red border-coral-red', round: i + 1, text: debateState.critiques[i] });
     }
   }
-  if (debateState.arbitration) {
-    rounds.push({ role: 'ARBITRATOR', name: 'System Node', color: 'bg-coral-gold/10 text-coral-gold border-coral-gold', round: 'Final', text: debateState.arbitration });
+  if (debateState.final_answer) {
+    rounds.push({ role: 'ARBITRATOR', name: 'System Node', color: 'bg-coral-gold/10 text-coral-gold border-coral-gold', round: 'Final', text: debateState.final_answer });
   }
 
   return (

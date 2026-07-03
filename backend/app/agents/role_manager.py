@@ -3,9 +3,10 @@ class RoleManager:
     def should_continue(
             self, 
             critic_feedback: str,
-            round_count: int
+            round_count: int,
+            max_rounds: int = 3
     ):
-        if round_count >= 2:
+        if round_count >= max_rounds:
             return False
         
         keywords = [

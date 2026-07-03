@@ -115,7 +115,7 @@ const DebateArena = () => {
           color="coral-red"
           score={state.debateState.scores?.arbitrator || 0.00}
           status={state.agentStatuses.arbitrator}
-          output={state.debateState.arbitration || ''}
+          output={state.debateState.final_answer || ''}
           isArbitrator={true}
         />
       </div>

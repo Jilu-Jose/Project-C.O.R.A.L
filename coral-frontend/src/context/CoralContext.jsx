@@ -59,11 +59,28 @@ function coralReducer(state, action) {
         },
         traceEvents: [],
       };
-    case 'UPDATE_DEBATE_STATE':
+    case 'UPDATE_DEBATE_STATE': {
+      const newDebateState = { ...state.debateState };
+      const payload = action.payload;
+
+      // For proposals and critiques, use the latest array from the poller
+      // (the poller builds up the full array each step)
+      if (payload.proposals) {
+        newDebateState.proposals = payload.proposals;
+      }
+      if (payload.critiques) {
+        newDebateState.critiques = payload.critiques;
+      }
+
+      // Merge all other keys
+      const { proposals, critiques, ...rest } = payload;
+      Object.assign(newDebateState, rest);
+
       return {
         ...state,
-        debateState: { ...state.debateState, ...action.payload },
+        debateState: newDebateState,
       };
+    }
     case 'SET_AGENT_STATUSES':
       return {
         ...state,
@@ -77,7 +94,7 @@ function coralReducer(state, action) {
     case 'SET_TRACE_EVENTS':
       return {
         ...state,
-        traceEvents: action.payload,
+        traceEvents: [...state.traceEvents, ...action.payload],
       };
     case 'SET_SESSION_HISTORY':
       return { ...state, sessionHistory: action.payload };
